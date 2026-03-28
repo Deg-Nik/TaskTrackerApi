@@ -3,7 +3,9 @@ package com.example.tasktrackerapi.service;
 import com.example.tasktrackerapi.annotation.Monitored;
 import com.example.tasktrackerapi.annotation.Secured;
 import com.example.tasktrackerapi.entity.Task;
+import com.example.tasktrackerapi.entity.User;
 import com.example.tasktrackerapi.repository.TaskRepository;
+import com.example.tasktrackerapi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,8 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class TaskService {
     private final TaskRepository taskRepository;
+    private final UserRepository userRepository;
+
 
     /**
      * Найти все задачи
@@ -42,14 +46,23 @@ public class TaskService {
      * @Monitored   - замер времени
      */
     @Transactional
-//    @Secured(role = "USER")
     @Monitored(value = "Create task", threshold = 1000)
     public Task create(Task task) {
+
         if (task.getTitle() == null || task.getTitle().isEmpty())
             throw new IllegalArgumentException("Title is required");
 
+        if (task.getOwnerId() == null)
+            throw new IllegalArgumentException("ownerId is required");
+
+        User owner = userRepository.findById(task.getOwnerId())
+                .orElseThrow(() -> new RuntimeException("User not found: " + task.getOwnerId()));
+
+        task.setOwner(owner);
+
         return taskRepository.save(task);
     }
+
 
     /**
      * Обновить задачу
